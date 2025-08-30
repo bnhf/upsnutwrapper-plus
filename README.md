@@ -17,7 +17,7 @@ WinNUT:
 <img width="706" height="413" alt="Screenshot 2025-08-18 150504" src="https://github.com/user-attachments/assets/6392e026-bafd-4708-a8a7-b0326cf61177" />
 
 The YAML below is intended to be self-documenting, and typically requires no editing. The Environment variables section of Portainer should be used for all of your installation-specific values:
-```
+```yaml
 services:
   upsnutwrapper-plus: # This docker-compose typically requires no editing. Use the Environment variables section of Portainer to set your values.
     # 2025.08.19
@@ -47,7 +47,7 @@ services:
     restart: unless-stopped
 ```
 And here's a set of sample env vars, which can be copy-and-pasted into Portainer in Advanced mode. In that mode, it's quick-and-easy to modify those values for your use. Refer to the comments in the compose for clarification on how a given variable is used:
-```
+```yaml
 TAG=latest
 HOSTNAME=RPi6_nut
 HOST_PORT=3493
