@@ -35,7 +35,7 @@ services:
       - BATTERY_TYPE=${BATTERY_TYPE:-PbAc} # Set this to match your UPS battery type. Li-ion=Lithium-ion, PbAc=Lead Acid. Default=PbAc.
       - DEVICE_DESCRIPTION=${DEVICE_DESCRIPTION:-UPS NUT Apcupsd Wrapper}
       - INPUT_FREQUENCY_NOMINAL=${INPUT_FREQUENCY_NOMINAL:-50} # Set this to match your local nominal line frequency. 50=50Hz, 60=60Hz. Default=50.
-      - INPUT_SENSITIVITY=${INPUT_SENSITIVITY:-low} # Set this to match the input sensitivy in use on your UPS. Typically low, medium or high. Default=low.
+      - INPUT_SENSITIVITY=${INPUT_SENSITIVITY:-low} # Set this to match the input sensitivity in use on your UPS. Typically low, medium or high. Default=low.
       - INPUT_TRANSFER_HIGH=${INPUT_TRANSFER_HIGH:-285} # Set this to match the high voltage transfer value for the sensitivity selected. Default=285.
       - INPUT_TRANSFER_LOW=${INPUT_TRANSFER_LOW:-196} # Set this to match the low voltage transfer value for the sensitivity selected. Default=196.
       - INPUT_VOLTAGE_NOMINAL=${INPUT_VOLTAGE_NOMINAL:-240} # Set this to match your local nominal line voltage. 240=240V, 120=120V. Default=240.
