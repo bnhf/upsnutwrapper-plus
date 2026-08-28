@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # upsnutwrapper.sh - Emulates a NUT server using apcaccess and tcpserver
-# 2025.08.25
+# 2026.08.27
 
 [[ "$DEBUG" == "true" ]] \
   && exec 2>/tmp/upsnutwrapper.debug \
@@ -33,8 +33,11 @@ input_transfer_high="${INPUT_TRANSFER_HIGH:-285}"
 input_transfer_low="${INPUT_TRANSFER_LOW:-196}"
 input_voltage_nominal="${INPUT_VOLTAGE_NOMINAL:-240}"
 input_power_default="$( [[ ${INPUT_POWER_SUPPORTED:-true} == "true" ]] && echo 0 || echo "" )"
+input_shelly_plug="${INPUT_SHELLY_PLUG:-}"
 output_power_default="$( [[ ${OUTPUT_POWER_SUPPORTED:-true} == "true" ]] && echo 0 || echo "" )"
+output_shelly_plugs=( ${OUTPUT_SHELLY_PLUGS:-} )
 ups_beeper_status="${UPS_BEEPER_STATUS:-enabled}"
+ups_rated_watts="${UPS_RATED_WATTS:-}"
 
 # -------------------- Logging --------------------
 
@@ -80,12 +83,50 @@ getTestResult() {
 }
 
 getRealPowerNominal() {
+  if [[ -n "$ups_rated_watts" ]]; then
+    ups[ups.realpower.nominal]="$ups_rated_watts"
+    return
+  fi
   case "${ups[device.model]}" in
 	  *"Back-UPS XS 700U"*)	ups[ups.realpower.nominal]="390" ;;
 	  *"SMART-UPS 700"*)		ups[ups.realpower.nominal]="450" ;;
 	  *"Smart-UPS C 1500"*)	ups[ups.realpower.nominal]="900" ;;
 	  *"Back-UPS RS 1500"*)	ups[ups.realpower.nominal]="865" ;;
+	  *"Smart-UPS 500"*)		ups[ups.realpower.nominal]="400" ;;
   esac
+}
+
+getShellyInputData() {
+  [[ -z "$input_shelly_plug" ]] && return 0
+  local output
+  output="$(wget -qO- -T 2 -t 1 "http://${input_shelly_plug}/rpc/Switch.GetStatus?id=0" 2>/dev/null || true)"
+  [[ -z "$output" ]] && return 1
+  local shelly_input_voltage shelly_input_freq
+  shelly_input_voltage="$(jq -r '.voltage // empty' <<< "$output")"
+  shelly_input_freq="$(jq -r '.freq // empty' <<< "$output")"
+  [[ ( -z "${ups[input.voltage]}" || "${ups[input.voltage]}" == "0" ) && -n "$shelly_input_voltage" ]] && ups[input.voltage]="$shelly_input_voltage"
+  [[ ( -z "${ups[input.frequency]}" || "${ups[input.frequency]}" == "0" ) && -n "$shelly_input_freq" ]] && ups[input.frequency]="$shelly_input_freq"
+}
+
+getShellyOutputData() {
+  [[ ${#output_shelly_plugs[@]} -eq 0 ]] && return 0
+  local plug output responses=""
+  for plug in "${output_shelly_plugs[@]}"; do
+    output="$(wget -qO- -T 2 -t 1 "http://${plug}/rpc/Switch.GetStatus?id=0" 2>/dev/null || true)"
+    [[ -n "$output" ]] && responses+="$output"$'\n'
+  done
+  [[ -z "$responses" ]] && return 1
+  local shelly_output_voltage shelly_output_current shelly_output_power
+  shelly_output_voltage="$(jq -rs '[.[].voltage] | first' <<< "$responses")"
+  shelly_output_current="$(jq -rs '[.[].current] | add' <<< "$responses")"
+  shelly_output_power="$(jq -rs '[.[].apower] | add' <<< "$responses")"
+  [[ ( -z "${ups[output.voltage]}" || "${ups[output.voltage]}" == "0" ) && "$shelly_output_voltage" != "null" ]] && ups[output.voltage]="$shelly_output_voltage"
+  [[ ( -z "${ups[output.current]}" || "${ups[output.current]}" == "0" ) && "$shelly_output_current" != "null" ]] && ups[output.current]="$shelly_output_current"
+  [[ -z "${ups[ups.realpower]}" && "$shelly_output_power" != "null" ]] && ups[ups.realpower]="$shelly_output_power"
+  if [[ "$shelly_output_power" != "null" && -n "${ups[ups.realpower.nominal]}" && "${ups[ups.realpower.nominal]}" != "0" \
+        && ( -z "${ups[ups.load]}" || "${ups[ups.load]}" == "0" ) ]]; then
+    ups[ups.load]="$(jq -n --arg p "$shelly_output_power" --arg n "${ups[ups.realpower.nominal]}" '(($p|tonumber) / ($n|tonumber) * 100 | floor)')"
+  fi
 }
 
 # -------------------- Set Default Values --------------------
@@ -251,6 +292,8 @@ getFullData() {
   [[ -z ${ups[battery.date]} ]] && ups[battery.date]="${ups[ups.mfr.date]}"
   [[ -z ${ups[ups.mfr.date]} ]] && ups[ups.mfr.date]="${ups[battery.date]}"
   getRealPowerNominal
+  getShellyInputData || true
+  getShellyOutputData || true
 }
 
 # -------------------- Main Loop --------------------

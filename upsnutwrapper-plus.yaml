@@ -1,6 +1,6 @@
 services:
   upsnutwrapper-plus: # This docker-compose typically requires no editing. Use the Environment variables section of Portainer to set your values.
-    # 2025.08.19
+    # 2026.08.27
     # GitHub home for this project: https://github.com/bnhf/upsnutwrapper-plus.
     # Docker container home for this project with setup instructions: https://hub.docker.com/r/bnhf/upsnutwrapper-plus.
     image: bnhf/upsnutwrapper-plus:${TAG:-latest} # Add the tag like latest or test to the environment variables below. 
@@ -11,6 +11,7 @@ services:
     environment: # This Docker compose is best used with Portainer. Any env vars you'd like to change should be added in the Environment variables section of the Portainer-Stacks editor.
       - APCUPSD_SERVER=${APCUPSD_SERVER:-localhost} # Set the hostname or IP to reach your apcupsd server. Add port if not 3551 in the form hostname:port or ip:port. Default=localhost.
       - UPS_NAMES=${UPSNAME} # Required. Set a name for the UPS (1 to 8 chars) that will be used by System Tray notifications, nut-cgi and Grafana dashboards.
+      - UPS_RATED_WATTS=${UPS_RATED_WATTS} # Optional. Set your UPS's rated real power (Watts) if apcupsd doesn't report it and your model isn't one of the few this script recognizes. Used as ups.realpower.nominal, needed to calculate ups.load from Shelly output plug data. Overrides the built-in model lookup.
       - BATTERY_DATE=${BATTERY_DATE} # If you can't update the battery installation date in your UPS, you can override it here. In the form YYYY/MM/DD.
       - BATTERY_TYPE=${BATTERY_TYPE:-PbAc} # Set this to match your UPS battery type. Li-ion=Lithium-ion, PbAc=Lead Acid. Default=PbAc.
       - DEVICE_DESCRIPTION=${DEVICE_DESCRIPTION:-UPS NUT Apcupsd Wrapper}
@@ -20,7 +21,9 @@ services:
       - INPUT_TRANSFER_LOW=${INPUT_TRANSFER_LOW:-196} # Set this to match the low voltage transfer value for the sensitivity selected. Default=196.
       - INPUT_VOLTAGE_NOMINAL=${INPUT_VOLTAGE_NOMINAL:-240} # Set this to match your local nominal line voltage. 240=240V, 120=120V. Default=240.
       - INPUT_POWER_SUPPORTED=${INPUT_POWER_SUPPORTED:-true} # Set this to false if apcupsd does not report your UPS input power voltage. Default=true.
+      - INPUT_SHELLY_PLUG=${INPUT_SHELLY_PLUG} # Optional. Hostname or IP of a Shelly smart plug (Gen2+) monitoring your UPS's input power. Supplies input.voltage and input.frequency only when apcupsd doesn't already report them.
       - OUTPUT_POWER_SUPPORTED=${OUTPUT_POWER_SUPPORTED:-true} # Set this to false if apcupsd does not report your UPS output power voltage. Default=true.
+      - OUTPUT_SHELLY_PLUGS=${OUTPUT_SHELLY_PLUGS} # Optional. Space-separated list of hostnames/IPs of Shelly smart plugs (Gen2+) monitoring equipment on your UPS's output. Currents and wattages are summed to supply output.current, output.voltage, ups.realpower and ups.load only when apcupsd doesn't already report them.
       - UPS_BEEPER_STATUS=${UPS_BEEPER_STATUS:-enabled} # Set this to disabled if you've turned off your UPS beeper (alarm).
       - LOGGING=${LOGGING:-true} # Docker users should leave this set to true. Standalone script users should generally set this to false. Default=true.
       - DEBUG=${DEBUG:-false} # When set to true Bash debugging will be sent to a file, /tmp/upsnutwrapper.debug. Set to true only for short-term debugging. Default=false.
